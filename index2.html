@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Pro Clone - Vercel Optimized</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0f0f0f; color: white; scrollbar-gutter: stable; }
+        .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .video-card:hover { transform: translateY(-2px); transition: transform 0.2s; }
+        iframe { background-color: #000; border-radius: 12px; }
+        @media (max-width: 1024px) {
+            iframe { border-radius: 0; }
+            #sidebar { display: none; }
+        }
+        .channel-item { transition: all 0.2s; }
+        .channel-item:hover { background-color: #1a1a1a; }
+        .channel-item.active { background-color: #262626; border-left: 3px solid #ff0000; }
+    </style>
+</head>
+<body class="font-sans">
+
+    <!-- Header -->
+    <header class="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 h-14 bg-[#0f0f0f]/95 backdrop-blur-md border-b border-white/5">
+        <div class="flex items-center gap-3">
+            <button id="backBtn" onclick="backToHome()" class="p-2 hover:bg-zinc-800 rounded-full hidden">
+                <svg width="24" height="24" fill="white" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+            </button>
+            <div class="flex items-center gap-1 cursor-pointer" onclick="backToHome()">
+                <svg width="40" height="28" viewBox="0 0 200 140" fill="red">
+                    <rect x="20" y="20" width="160" height="100" fill="red"/>
+                    <polygon points="75,60 75,100 125,80" fill="white"/>
+                </svg>
+                <span class="text-lg font-bold tracking-tighter">YouTube</span>
+            </div>
+        </div>
+
+        <div class="flex items-center flex-grow max-w-[600px] mx-4">
+            <div class="flex w-full">
+                <input id="searchInput" type="text" placeholder="検索" 
+                    class="w-full bg-[#121212] border border-zinc-700 rounded-l-full py-1.5 px-5 focus:outline-none focus:border-blue-500 text-sm">
+                <button onclick="performSearch()" class="bg-zinc-800 border border-l-0 border-zinc-700 rounded-r-full px-5 hover:bg-zinc-700">
+                    <svg width="20" height="20" fill="white" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <button onclick="openSettings()" class="p-2 hover:bg-zinc-800 rounded-full" title="設定">
+                <svg width="24" height="24" fill="white" viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l1.72-1.34c.15-.12.19-.34.1-.51l-1.63-2.83c-.12-.22-.37-.29-.59-.22l-2.03.81c-.42-.32-.86-.58-1.35-.78l-.31-2.15c-.05-.24-.24-.41-.48-.41h-3.26c-.24 0-.43.17-.48.41l-.31 2.15c-.48.2-.93.47-1.35.78l-2.03-.81c-.23-.09-.47 0-.59.22L2.74 8.87c-.1.17-.05.39.1.51l1.72 1.34c-.05.3-.07.62-.07.94 0 .33.02.64.07.94l-1.72 1.34c-.15.12-.19.34-.1.51l1.63 2.83c.12.22.37.29.59.22l2.03-.81c.42.32.86.58 1.35.78l.31 2.15c.05.24.24.41.48.41h3.26c.24 0 .43-.17.48-.41l.31-2.15c.48-.2.93-.47 1.35-.78l2.03.81c.23.09.47 0 .59-.22l1.63-2.83c.1-.17.05-.39-.1-.51l-1.72-1.34zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+            </button>
+            <div class="w-8 h-8 bg-zinc-800 rounded-full border border-white/10 flex items-center justify-center font-bold text-xs cursor-pointer" onclick="logout()" title="ログアウト">U</div>
+        </div>
+    </header>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div class="bg-zinc-900 rounded-3xl p-8 max-w-md w-full border border-white/10">
+            <h2 class="text-xl font-bold mb-6 text-red-500">設定</h2>
+            
+            <div class="mb-6">
+                <label class="text-sm text-zinc-400 mb-2 block">YouTube Data API キー</label>
+                <input id="settingsApiKey" type="password" placeholder="YouTube Data API v3 Key" 
+                    class="w-full bg-black border border-zinc-800 rounded-xl p-4 outline-none focus:border-red-600 text-sm">
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="closeSettings()" class="flex-1 bg-zinc-800 hover:bg-zinc-700 py-2 rounded-xl font-bold transition-all">
+                    キャンセル
+                </button>
+                <button onclick="saveSettings()" class="flex-1 bg-red-600 hover:bg-red-700 py-2 rounded-xl font-bold transition-all">
+                    保存
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <main class="pt-14 flex">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="w-64 bg-[#0f0f0f] border-r border-white/5 fixed left-0 top-14 h-[calc(100vh-56px)] overflow-y-auto no-scrollbar hidden lg:block">
+            <div class="p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-sm font-bold text-zinc-400">登録チャンネル</h3>
+                </div>
+                <div id="channelList" class="flex flex-col gap-2">
+                    <p class="text-xs text-zinc-500">チャンネルを登録してください</p>
+                </div>
+            </div>
+        </aside>
+
+        <div id="mainContent" class="flex-grow lg:ml-64">
+            <!-- API Auth Section -->
+            <div id="authSection" class="min-h-[80vh] flex flex-col items-center justify-center p-4">
+                <div class="w-full max-w-md bg-zinc-900 p-8 rounded-3xl border border-white/5 text-center">
+                    <h2 class="text-xl font-bold mb-6 text-red-500">API CONNECT</h2>
+                    <input id="apiKey" type="password" placeholder="YouTube Data API v3 Key" 
+                        class="w-full bg-black border border-zinc-800 rounded-xl p-4 mb-4 outline-none focus:border-red-600">
+                    <button onclick="initApp()" class="w-full bg-red-600 hover:bg-red-700 py-4 rounded-xl font-bold transition-all">
+                        Start Exploration
+                    </button>
+                </div>
+            </div>
+
+            <!-- Grid View -->
+            <div id="gridView" class="hidden p-4 max-w-[2400px] mx-auto">
+                <div id="homeGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-x-4 gap-y-10">
+                    <!-- Video Cards Generated Here -->
+                </div>
+                <div class="flex justify-center mt-12 mb-8">
+                    <button onclick="loadMoreVideos()" id="loadMoreBtn" class="bg-zinc-800 hover:bg-zinc-700 px-8 py-3 rounded-full font-bold transition-all">
+                        もっと読み込む
+                    </button>
+                </div>
+            </div>
+
+            <!-- Watch View -->
+            <div id="watchView" class="hidden flex flex-col lg:flex-row p-0 lg:p-6 gap-6 max-w-[1800px] mx-auto">
+                <!-- Main Content -->
+                <div class="flex-grow lg:w-[70%]">
+                    <div class="aspect-video w-full">
+                        <iframe id="mainPlayer" class="w-full h-full" src="" frameborder="0" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                            allowfullscreen></iframe>
+                    </div>
+                    <div class="p-4 lg:px-0">
+                        <h1 id="playingTitle" class="text-lg lg:text-xl font-bold line-clamp-2"></h1>
+                        <div class="mt-4 flex items-center gap-3 border-b border-white/10 pb-6">
+                            <div id="avatar" class="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center font-bold border border-white/5 overflow-hidden">
+                                <img id="avatarImg" src="" alt="" class="w-full h-full object-cover">
+                            </div>
+                            <div class="flex-grow">
+                                <p id="playingChannel" class="font-bold text-sm"></p>
+                                <p id="subscriberCount" class="text-zinc-400 text-[10px]"></p>
+                            </div>
+                            <button id="subscribeBtn" class="bg-white text-black px-4 py-2 rounded-full font-bold text-xs hover:bg-zinc-200" onclick="subscribeToChannel()">登録</button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Recommendation Column -->
+                <div class="lg:w-[30%] px-4 lg:px-0 pb-10">
+                    <h3 class="text-sm font-bold mb-4 text-zinc-400">関連動画</h3>
+                    <div id="sideList" class="flex flex-col gap-4"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+<script>
+        let API_KEY = "";
+        let videos = [];
+        let currentQuery = 'Android OS Google';
+        let pageToken = null;
+        let subscriptions = [];
+        let currentChannelId = null;
+        let currentChannelTitle = null;
+
+        // ページが読み込まれた時に実行
+        window.onload = () => {
+            const savedKey = localStorage.getItem('yt_api_key');
+            const savedSubs = localStorage.getItem('yt_subscriptions');
+            
+            if (savedSubs) {
+                subscriptions = JSON.parse(savedSubs);
+            }
+            
+            if (savedKey) {
+                API_KEY = savedKey;
+                document.getElementById('authSection').style.display = 'none';
+                document.getElementById('gridView').classList.remove('hidden');
+                document.getElementById('sidebar').classList.remove('hidden');
+                renderChannelList();
+                fetchData('Android OS Google');
+            }
+        };
+
+        function initApp() {
+            const key = document.getElementById('apiKey').value.trim();
+            if(key) {
+                localStorage.setItem('yt_api_key', key);
+                API_KEY = key;
+                document.getElementById('authSection').style.display = 'none';
+                document.getElementById('gridView').classList.remove('hidden');
+                document.getElementById('sidebar').classList.remove('hidden');
+                renderChannelList();
+                fetchData('Android OS Google');
+            }
+        }
+
+        function openSettings() {
+            const modal = document.getElementById('settingsModal');
+            document.getElementById('settingsApiKey').value = API_KEY;
+            modal.classList.remove('hidden');
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.add('hidden');
+        }
+
+        function saveSettings() {
+            const newKey = document.getElementById('settingsApiKey').value.trim();
+            if(newKey) {
+                localStorage.setItem('yt_api_key', newKey);
+                API_KEY = newKey;
+                closeSettings();
+                location.reload();
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('yt_api_key');
+            location.reload();
+        }
+
+        async function fetchData(query, append = false) {
+            const maxResults = 25;
+            let url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=${maxResults}&q=${encodeURIComponent(query)}&type=video&key=${API_KEY}`;
+            
+            if (pageToken && append) {
+                url += `&pageToken=${pageToken}`;
+            }
+
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                if(data.error) {
+                    alert("APIエラー: " + data.error.message);
+                    logout();
+                    return;
+                }
+
+                if(data.items) {
+                    if (!append) {
+                        videos = data.items;
+                    } else {
+                        videos = videos.concat(data.items);
+                    }
+                    pageToken = data.nextPageToken || null;
+                    renderHome();
+                }
+            } catch (e) { 
+                console.error(e);
+                alert("データの取得に失敗しちゃった。");
+            }
+        }
+
+        async function fetchChannelVideos(channelId, append = false) {
+            const maxResults = 25;
+            let url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=${maxResults}&channelId=${channelId}&type=video&order=date&key=${API_KEY}`;
+            
+            if (pageToken && append) {
+                url += `&pageToken=${pageToken}`;
+            }
+
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                if(data.error) {
+                    alert("APIエラー: " + data.error.message);
+                    return;
+                }
+
+                if(data.items) {
+                    if (!append) {
+                        videos = data.items;
+                    } else {
+                        videos = videos.concat(data.items);
+                    }
+                    pageToken = data.nextPageToken || null;
+                    renderHome();
+                }
+            } catch (e) { 
+                console.error(e);
+                alert("データの取得に失敗しちゃった。");
+            }
+        }
+
+        function renderChannelList() {
+            const list = document.getElementById('channelList');
+            if(subscriptions.length === 0) {
+                list.innerHTML = '<p class="text-xs text-zinc-500">チャンネルを登録してください</p>';
+                return;
+            }
+            
+            list.innerHTML = subscriptions.map((channel, idx) => `
+                <div class="channel-item p-3 rounded-lg cursor-pointer flex items-center gap-3" onclick="loadChannelVideos('${channel.channelId}', '${channel.channelTitle.replace(/'/g, "\\'")}')"="">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-red-500 to-red-700 flex-shrink-0 flex items-center justify-center text-xs font-bold overflow-hidden">
+                        ${channel.channelTitle[0]}
+                    </div>
+                    <div class="overflow-hidden flex-grow">
+                        <p class="text-sm font-bold truncate">${channel.channelTitle}</p>
+                    </div>
+                    <button onclick="event.stopPropagation(); removeSubscription(${idx})" class="text-zinc-500 hover:text-red-500 text-lg">✕</button>
+                </div>
+            `).join('');
+        }
+
+        function loadChannelVideos(channelId, channelTitle) {
+            currentChannelId = channelId;
+            currentChannelTitle = channelTitle;
+            currentQuery = `channel:${channelId}`;
+            videos = [];
+            pageToken = null;
+            document.getElementById('gridView').classList.remove('hidden');
+            document.getElementById('watchView').classList.add('hidden');
+            document.getElementById('backBtn').classList.add('hidden');
+            window.scrollTo(0, 0);
+            fetchChannelVideos(channelId);
+        }
+
+        function subscribeToChannel() {
+            if (!currentChannelId) return;
+            
+            const isSubscribed = subscriptions.find(c => c.channelId === currentChannelId);
+            
+            if (isSubscribed) {
+                const idx = subscriptions.findIndex(c => c.channelId === currentChannelId);
+                removeSubscription(idx);
+            } else {
+                subscriptions.push({
+                    channelId: currentChannelId,
+                    channelTitle: currentChannelTitle
+                });
+                localStorage.setItem('yt_subscriptions', JSON.stringify(subscriptions));
+                renderChannelList();
+                updateSubscribeButton();
+            }
+        }
+
+        function removeSubscription(idx) {
+            subscriptions.splice(idx, 1);
+            localStorage.setItem('yt_subscriptions', JSON.stringify(subscriptions));
+            renderChannelList();
+            updateSubscribeButton();
+        }
+
+        function updateSubscribeButton() {
+            const btn = document.getElementById('subscribeBtn');
+            if (subscriptions.find(c => c.channelId === currentChannelId)) {
+                btn.textContent = '登録済み';
+                btn.className = 'bg-zinc-700 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-zinc-600';
+            } else {
+                btn.textContent = '登録';
+                btn.className = 'bg-white text-black px-4 py-2 rounded-full font-bold text-xs hover:bg-zinc-200';
+            }
+        }
+
+        function loadMoreVideos() {
+            if (currentChannelId) {
+                fetchChannelVideos(currentChannelId, true);
+            } else {
+                fetchData(currentQuery, true);
+            }
+        }
+
+        function renderHome() {
+            const grid = document.getElementById('homeGrid');
+            grid.innerHTML = videos.map((v, i) => `
+                <div class="video-card cursor-pointer group flex flex-col gap-3" onclick="loadPlayer(${i})">
+                    <div class="aspect-video rounded-xl overflow-hidden bg-zinc-800">
+                        <img src="${v.snippet.thumbnails.high.url}" class="w-full h-full object-cover">
+                    </div>
+                    <div class="flex gap-3 px-1">
+                        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-red-500 to-red-700 flex-shrink-0 flex items-center justify-center text-xs font-bold overflow-hidden">
+                            ${v.snippet.channelTitle[0]}
+                        </div>
+                        <div class="overflow-hidden">
+                            <h3 class="text-sm font-bold line-clamp-2 leading-tight">${v.snippet.title}</h3>
+                            <p class="text-zinc-400 text-xs mt-1">${v.snippet.channelTitle}</p>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function loadPlayer(index) {
+            const v = videos[index];
+            const videoId = v.id.videoId;
+            currentChannelId = v.snippet.channelId;
+            currentChannelTitle = v.snippet.channelTitle;
+            
+            document.getElementById('gridView').classList.add('hidden');
+            document.getElementById('watchView').classList.remove('hidden');
+            document.getElementById('backBtn').classList.remove('hidden');
+            const origin = encodeURIComponent(window.location.origin);
+            document.getElementById('mainPlayer').src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&enablejsapi=1&origin=${origin}`;
+            document.getElementById('playingTitle').innerText = v.snippet.title;
+            document.getElementById('playingChannel').innerText = v.snippet.channelTitle;
+            document.getElementById('subscriberCount').innerText = '';
+            
+            renderSidebar(index);
+            updateSubscribeButton();
+            window.scrollTo(0, 0);
+        }
+
+        function renderSidebar(currentIdx) {
+            const list = document.getElementById('sideList');
+            const filtered = videos.filter((_, i) => i !== currentIdx);
+            list.innerHTML = filtered.map(v => {
+                const idx = videos.indexOf(v);
+                return `
+                    <div class="flex gap-3 cursor-pointer group" onclick="loadPlayer(${idx})">
+                        <div class="w-40 aspect-video flex-shrink-0 rounded-lg overflow-hidden bg-zinc-800">
+                            <img src="${v.snippet.thumbnails.medium.url}" class="w-full h-full object-cover">
+                        </div>
+                        <div class="flex flex-col overflow-hidden">
+                            <h4 class="text-xs font-bold line-clamp-2 text-zinc-100">${v.snippet.title}</h4>
+                            <p class="text-zinc-400 text-[10px] mt-1">${v.snippet.channelTitle}</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function backToHome() {
+            document.getElementById('mainPlayer').src = "";
+            document.getElementById('watchView').classList.add('hidden');
+            document.getElementById('backBtn').classList.add('hidden');
+            document.getElementById('gridView').classList.remove('hidden');
+            window.scrollTo(0, 0);
+        }
+
+        function performSearch() {
+            const q = document.getElementById('searchInput').value;
+            if(q) {
+                currentQuery = q;
+                currentChannelId = null;
+                videos = [];
+                pageToken = null;
+                backToHome();
+                fetchData(q);
+            }
+        }
+
+        document.getElementById('searchInput').onkeydown = (e) => {
+            if(e.key === 'Enter') performSearch();
+        };
+
+        document.getElementById('settingsModal').addEventListener('click', (e) => {
+            if(e.target.id === 'settingsModal') closeSettings();
+        });
+    </script>
+</body>
+</html>
