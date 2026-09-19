@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YouTube ギャラリー</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: 'Segoe UI', sans-serif; }
+  .video-card { transition: transform 0.2s; }
+  .video-card:hover { transform: translateY(-4px); }
+  .aspect-video { aspect-ratio: 16 / 9; }
+</style>
+</head>
+<body class="bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white min-h-screen">
+
+<div class="max-w-7xl mx-auto px-4 py-8">
+  <header class="mb-8 text-center">
+    <h1 class="text-4xl font-bold bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent">
+      ▶ YouTube ギャラリー
+    </h1>
+    <p class="text-gray-400 mt-2">お気に入りの動画をまとめて管理</p>
+  </header>
+
+  <!-- 入力フォーム -->
+  <div class="bg-gray-800/60 backdrop-blur rounded-2xl p-6 mb-8 shadow-xl border border-gray-700">
+    <div class="flex flex-col md:flex-row gap-3">
+      <input id="urlInput" type="text" placeholder="YouTube URL または 動画ID を入力"
+        class="flex-1 px-4 py-3 bg-gray-900 rounded-lg border border-gray-700 focus:border-red-500 focus:outline-none text-white placeholder-gray-500">
+      <input id="titleInput" type="text" placeholder="タイトル（任意）"
+        class="md:w-64 px-4 py-3 bg-gray-900 rounded-lg border border-gray-700 focus:border-red-500 focus:outline-none text-white placeholder-gray-500">
+      <button id="addBtn"
+        class="px-6 py-3 bg-red-600 hover:bg-red-700 rounded-lg font-semibold transition">
+        追加
+      </button>
+    </div>
+    <p class="text-xs text-gray-500 mt-2">
+      対応形式: https://youtube.com/watch?v=... / https://youtu.be/... / 動画IDのみ
+    </p>
+  </div>
+
+  <!-- 動画グリッド -->
+  <div id="grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+
+  <div id="empty" class="text-center text-gray-500 py-20 hidden">
+    <p class="text-6xl mb-4">🎬</p>
+    <p>まだ動画がありません。上のフォームから追加してください。</p>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'yt_gallery_videos';
+let videos = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+
+const grid = document.getElementById('grid');
+const empty = document.getElementById('empty');
+const urlInput = document.getElementById('urlInput');
+const titleInput = document.getElementById('titleInput');
+const addBtn = document.getElementById('addBtn');
+
+// URLからvideoIDを抽出
+function extractVideoId(input) {
+  input = input.trim();
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
+    /^([a-zA-Z0-9_-]{11})$/
+  ];
+  for (const p of patterns) {
+    const m = input.match(p);
+    if (m) return m[1];
+  }
+  return null;
+}
+
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(videos));
+}
+
+function render() {
+  grid.innerHTML = '';
+  if (videos.length === 0) {
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+
+  videos.forEach((v, idx) => {
+    const card = document.createElement('div');
+    card.className = 'video-card bg-gray-800 rounded-xl overflow-hidden shadow-lg border border-gray-700';
+    card.innerHTML = `
+      <div class="aspect-video">
+        <iframe class="w-full h-full"
+          src="https://www.youtube.com/embed/${v.id}"
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen></iframe>
+      </div>
+      <div class="p-4 flex items-center justify-between gap-2">
+        <input type="text" value="${v.title.replace(/"/g, '&quot;')}"
+          data-idx="${idx}" class="title-input flex-1 bg-transparent border-b border-transparent hover:border-gray-600 focus:border-red-500 focus:outline-none text-white font-medium">
+        <button data-idx="${idx}" class="delete-btn text-gray-400 hover:text-red-500 text-xl px-2" title="削除">✕</button>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+
+  // タイトル編集
+  document.querySelectorAll('.title-input').forEach(el => {
+    el.addEventListener('change', e => {
+      const i = +e.target.dataset.idx;
+      videos[i].title = e.target.value || '無題';
+      save();
+    });
+  });
+
+  // 削除
+  document.querySelectorAll('.delete-btn').forEach(el => {
+    el.addEventListener('click', e => {
+      const i = +e.target.dataset.idx;
+      if (confirm('この動画を削除しますか？')) {
+        videos.splice(i, 1);
+        save();
+        render();
+      }
+    });
+  });
+}
+
+function addVideo() {
+  const id = extractVideoId(urlInput.value);
+  if (!id) {
+    alert('有効なYouTube URLまたは動画IDを入力してください');
+    return;
+  }
+  if (videos.some(v => v.id === id)) {
+    alert('この動画は既に追加されています');
+    return;
+  }
+  const title = titleInput.value.trim() || '無題';
+  videos.unshift({ id, title });
+  save();
+  urlInput.value = '';
+  titleInput.value = '';
+  render();
+}
+
+addBtn.addEventListener('click', addVideo);
+urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') addVideo(); });
+titleInput.addEventListener('keydown', e => { if (e.key === 'Enter') addVideo(); });
+
+render();
+</script>
+</body>
+</html>
