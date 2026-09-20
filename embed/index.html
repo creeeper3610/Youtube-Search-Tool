@@ -3,9 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Embed Tool</title>
+<title>YouTube ギャラリー (Privacy Enhanced)</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<link rel="icon" type="image/svg+xml" href="../ytst_icon.svg">
 <style>
   body { font-family: 'Segoe UI', sans-serif; }
   .thumb { transition: transform 0.15s, box-shadow 0.15s; }
@@ -23,7 +22,7 @@
     <h1 class="text-3xl md:text-4xl font-bold bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent">
       ▶ YouTube ギャラリー
     </h1>
-    <p class="text-gray-400 text-sm mt-1">履歴からクリックして再生</p>
+    <p class="text-gray-400 text-sm mt-1">履歴からクリックして再生（プライバシー強化モード）</p>
   </header>
 
   <!-- 追加フォーム -->
@@ -107,7 +106,8 @@ function save() {
 
 function play(id) {
   currentId = id;
-  mainPlayer.src = `https://www.youtube.com/embed/${id}?autoplay=1`;
+  // プライバシー強化モードのURLに変更
+  mainPlayer.src = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1`;
   const v = videos.find(x => x.id === id);
   nowPlaying.innerHTML = v
     ? `<p class="text-white font-medium truncate">♪ ${v.title.replace(/</g,'&lt;')}</p>
@@ -216,7 +216,8 @@ clearBtn.addEventListener('click', () => {
 // 初期表示
 if (videos.length > 0) {
   currentId = videos[0].id;
-  mainPlayer.src = `https://www.youtube.com/embed/${currentId}`;
+  // プライバシー強化モードのURLに変更
+  mainPlayer.src = `https://www.youtube-nocookie.com/embed/${currentId}`;
 }
 renderHistory();
 </script>
