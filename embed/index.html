@@ -53,9 +53,9 @@ input {
 button {
     padding: 12px 20px;
     font-size: 16px;
+    cursor: pointer;
     border: none;
     border-radius: 8px;
-    cursor: pointer;
 }
 
 #player {
@@ -99,7 +99,7 @@ function extractVideoId(input) {
 
     input = input.trim();
 
-    if (/^[a-zA-Z0-9_-]{11}$/.test(input)) {
+    if (/^[A-Za-z0-9_-]{11}$/.test(input)) {
         return input;
     }
 
@@ -117,17 +117,17 @@ function extractVideoId(input) {
         const paths = url.pathname.split("/").filter(Boolean);
 
         const embedIndex = paths.indexOf("embed");
-        if (embedIndex !== -1) {
+        if (embedIndex !== -1 && paths[embedIndex + 1]) {
             return paths[embedIndex + 1];
         }
 
         const shortsIndex = paths.indexOf("shorts");
-        if (shortsIndex !== -1) {
+        if (shortsIndex !== -1 && paths[shortsIndex + 1]) {
             return paths[shortsIndex + 1];
         }
 
         const liveIndex = paths.indexOf("live");
-        if (liveIndex !== -1) {
+        if (liveIndex !== -1 && paths[liveIndex + 1]) {
             return paths[liveIndex + 1];
         }
 
@@ -136,7 +136,7 @@ function extractVideoId(input) {
     return null;
 }
 
-function loadVideo(id) {
+function loadVideo(videoId) {
 
     document.getElementById("home").style.display = "none";
 
@@ -144,32 +144,38 @@ function loadVideo(id) {
 
     iframe.src =
         "https://www.youtube-nocookie.com/embed/" +
-        encodeURIComponent(id);
+        encodeURIComponent(videoId) +
+        "?autoplay=0&rel=0";
 
     iframe.style.display = "block";
 }
 
 const params = new URLSearchParams(location.search);
-const id = params.get("id");
 
-if (id) {
-    loadVideo(id);
+const videoId = params.get("id");
+
+if (videoId) {
+    loadVideo(videoId);
 }
 
 document.getElementById("openBtn").addEventListener("click", () => {
 
-    const input = document.getElementById("url").value;
+    const input = document.getElementById("url").value.trim();
 
-    const id = extractVideoId(input);
+    if (!input) {
+        return;
+    }
 
-    if (!id) {
+    const videoId = extractVideoId(input);
+
+    if (!videoId) {
         alert("動画IDを取得できませんでした。");
         return;
     }
 
     window.open(
         "https://youtube-search-tool.vercel.app/fsembed/?id=" +
-        encodeURIComponent(id),
+        encodeURIComponent(videoId),
         "_blank"
     );
 });
