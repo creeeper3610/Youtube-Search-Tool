@@ -3,224 +3,177 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>YouTube ギャラリー (Privacy Enhanced)</title>
-<link rel="icon" type="image/svg+xml" href="../ytst_icon.svg">
-<script src="https://cdn.tailwindcss.com"></script>
+
+<title>YTFS埋め込み</title>
+
+<link rel="icon" href="../ytst_icon.svg" type="image/svg+xml">
+
 <style>
-  body { font-family: 'Segoe UI', sans-serif; }
-  .thumb { transition: transform 0.15s, box-shadow 0.15s; }
-  .thumb:hover { transform: scale(1.03); box-shadow: 0 4px 20px rgba(239, 68, 68, 0.3); }
-  .thumb.active { outline: 2px solid #ef4444; outline-offset: 2px; }
-  .aspect-video { aspect-ratio: 16 / 9; }
-  .scrollbar::-webkit-scrollbar { width: 6px; }
-  .scrollbar::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
+html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    overflow: hidden;
+    font-family: sans-serif;
+}
+
+#home {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #111;
+}
+
+.box {
+    width: min(700px, 90vw);
+}
+
+h1 {
+    color: white;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.input-row {
+    display: flex;
+    gap: 10px;
+}
+
+input {
+    flex: 1;
+    padding: 12px;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+}
+
+button {
+    padding: 12px 20px;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+#player {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: none;
+}
 </style>
 </head>
-<body class="bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white min-h-screen">
+<body>
 
-<div class="max-w-[1600px] mx-auto px-4 py-6">
-  <header class="mb-5 text-center">
-    <h1 class="text-3xl md:text-4xl font-bold bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent">
-      ▶ YouTube ギャラリー
-    </h1>
-    <p class="text-gray-400 text-sm mt-1">履歴からクリックして再生（プライバシー強化モード）</p>
-  </header>
+<div id="home">
+    <div class="box">
+        <h1>YTFS埋め込み</h1>
 
-  <!-- 追加フォーム -->
-  <div class="bg-gray-800/60 backdrop-blur rounded-xl p-4 mb-5 border border-gray-700">
-    <div class="flex flex-col md:flex-row gap-2">
-      <input id="urlInput" type="text" placeholder="YouTube URL または 動画ID"
-        class="flex-1 px-3 py-2 bg-gray-900 rounded-lg border border-gray-700 focus:border-red-500 focus:outline-none text-sm text-white placeholder-gray-500">
-      <input id="titleInput" type="text" placeholder="タイトル（任意）"
-        class="md:w-56 px-3 py-2 bg-gray-900 rounded-lg border border-gray-700 focus:border-red-500 focus:outline-none text-sm text-white placeholder-gray-500">
-      <button id="addBtn"
-        class="px-5 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold text-sm transition">
-        追加
-      </button>
+        <div class="input-row">
+            <input
+                id="url"
+                type="text"
+                placeholder="YouTubeのURLまたは動画ID"
+            >
+
+            <button id="openBtn">
+                全画面で開く
+            </button>
+        </div>
     </div>
-  </div>
-
-  <!-- 2カラム本体 -->
-  <div class="flex flex-col lg:flex-row gap-5">
-
-    <!-- 大きな再生エリア -->
-    <main class="flex-1 min-w-0">
-      <div id="playerWrap" class="bg-black rounded-xl overflow-hidden shadow-2xl border border-gray-700 aspect-video">
-        <iframe id="mainPlayer" class="w-full h-full" src=""
-          frameborder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowfullscreen></iframe>
-      </div>
-      <div id="nowPlaying" class="mt-3 px-1">
-        <p class="text-gray-500 text-sm">動画を選択してください</p>
-      </div>
-    </main>
-
-    <!-- 履歴サイドバー（小さく） -->
-    <aside class="lg:w-80 xl:w-96 flex-shrink-0">
-      <div class="bg-gray-800/60 backdrop-blur rounded-xl border border-gray-700 p-3">
-        <div class="flex items-center justify-between mb-3 px-1">
-          <h2 class="text-sm font-semibold text-gray-300">📜 履歴 <span id="count" class="text-gray-500 font-normal">(0)</span></h2>
-          <button id="clearBtn" class="text-xs text-gray-500 hover:text-red-500 transition">全削除</button>
-        </div>
-        <div id="historyList" class="space-y-2 max-h-[70vh] overflow-y-auto scrollbar pr-1"></div>
-        <div id="empty" class="text-center text-gray-500 py-10 text-sm hidden">
-          <p class="text-3xl mb-2">🎬</p>
-          <p>まだ動画がありません</p>
-        </div>
-      </div>
-    </aside>
-  </div>
 </div>
 
+<iframe
+    id="player"
+    allowfullscreen
+    allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share">
+</iframe>
+
 <script>
-const STORAGE_KEY = 'yt_gallery_videos';
-let videos = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-let currentId = videos[0]?.id || null;
-
-const mainPlayer = document.getElementById('mainPlayer');
-const nowPlaying = document.getElementById('nowPlaying');
-const historyList = document.getElementById('historyList');
-const empty = document.getElementById('empty');
-const countEl = document.getElementById('count');
-const urlInput = document.getElementById('urlInput');
-const titleInput = document.getElementById('titleInput');
-const addBtn = document.getElementById('addBtn');
-const clearBtn = document.getElementById('clearBtn');
-
 function extractVideoId(input) {
-  input = input.trim();
-  const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
-    /^([a-zA-Z0-9_-]{11})$/
-  ];
-  for (const p of patterns) {
-    const m = input.match(p);
-    if (m) return m[1];
-  }
-  return null;
-}
 
-function save() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(videos));
-}
+    input = input.trim();
 
-function play(id) {
-  currentId = id;
-  // プライバシー強化モードのURLに変更
-  mainPlayer.src = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1`;
-  const v = videos.find(x => x.id === id);
-  nowPlaying.innerHTML = v
-    ? `<p class="text-white font-medium truncate">♪ ${v.title.replace(/</g,'&lt;')}</p>
-       <p class="text-gray-500 text-xs truncate">ID: ${id}</p>`
-    : '';
-  renderHistory();
-}
+    if (/^[a-zA-Z0-9_-]{11}$/.test(input)) {
+        return input;
+    }
 
-function renderHistory() {
-  historyList.innerHTML = '';
-  countEl.textContent = `(${videos.length})`;
+    try {
 
-  if (videos.length === 0) {
-    empty.classList.remove('hidden');
-    nowPlaying.innerHTML = '<p class="text-gray-500 text-sm">動画を選択してください</p>';
-    mainPlayer.src = '';
-    return;
-  }
-  empty.classList.add('hidden');
+        const url = new URL(input);
 
-  videos.forEach((v, idx) => {
-    const item = document.createElement('div');
-    const isActive = v.id === currentId;
-    item.className = `thumb group flex gap-2 p-1.5 rounded-lg cursor-pointer ${isActive ? 'active bg-gray-700/50' : 'hover:bg-gray-700/40'}`;
-    item.innerHTML = `
-      <div class="relative flex-shrink-0 w-28 aspect-video rounded overflow-hidden bg-gray-900">
-        <img src="https://img.youtube.com/vi/${v.id}/mqdefault.jpg"
-          class="w-full h-full object-cover" alt="" loading="lazy">
-        <div class="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition">
-          <span class="text-white text-2xl opacity-0 group-hover:opacity-100 transition">▶</span>
-        </div>
-      </div>
-      <div class="flex-1 min-w-0 flex flex-col justify-between py-0.5">
-        <p class="text-sm font-medium text-white truncate">${v.title.replace(/</g,'&lt;')}</p>
-        <p class="text-xs text-gray-500 truncate">${v.id}</p>
-        <div class="flex gap-2 mt-1">
-          <button data-idx="${idx}" data-action="edit" class="text-xs text-gray-400 hover:text-white">✎ 編集</button>
-          <button data-idx="${idx}" data-action="delete" class="text-xs text-gray-400 hover:text-red-500">✕ 削除</button>
-        </div>
-      </div>
-    `;
-    // サムネクリックで再生
-    item.querySelector('img').addEventListener('click', () => play(v.id));
-    item.querySelector('.relative').addEventListener('click', () => play(v.id));
-    historyList.appendChild(item);
-  });
-
-  // ボタンイベント
-  historyList.querySelectorAll('button[data-action]').forEach(btn => {
-    btn.addEventListener('click', e => {
-      e.stopPropagation();
-      const idx = +btn.dataset.idx;
-      const action = btn.dataset.action;
-      if (action === 'delete') {
-        if (confirm('この動画を削除しますか？')) {
-          const removed = videos.splice(idx, 1)[0];
-          if (currentId === removed.id) {
-            currentId = videos[0]?.id || null;
-            if (currentId) play(currentId); else { mainPlayer.src = ''; nowPlaying.innerHTML = ''; }
-          }
-          save();
-          renderHistory();
+        if (url.hostname.includes("youtu.be")) {
+            return url.pathname.split("/").filter(Boolean)[0];
         }
-      } else if (action === 'edit') {
-        const newTitle = prompt('タイトルを入力', videos[idx].title);
-        if (newTitle !== null) {
-          videos[idx].title = newTitle.trim() || '無題';
-          save();
-          renderHistory();
-          if (videos[idx].id === currentId) play(currentId);
+
+        const v = url.searchParams.get("v");
+        if (v) return v;
+
+        const paths = url.pathname.split("/").filter(Boolean);
+
+        const embedIndex = paths.indexOf("embed");
+        if (embedIndex !== -1) {
+            return paths[embedIndex + 1];
         }
-      }
-    });
-  });
+
+        const shortsIndex = paths.indexOf("shorts");
+        if (shortsIndex !== -1) {
+            return paths[shortsIndex + 1];
+        }
+
+        const liveIndex = paths.indexOf("live");
+        if (liveIndex !== -1) {
+            return paths[liveIndex + 1];
+        }
+
+    } catch (e) {}
+
+    return null;
 }
 
-function addVideo() {
-  const id = extractVideoId(urlInput.value);
-  if (!id) { alert('有効なYouTube URLまたは動画IDを入力してください'); return; }
-  if (videos.some(v => v.id === id)) {
-    play(id);
-    urlInput.value = ''; titleInput.value = '';
-    return;
-  }
-  const title = titleInput.value.trim() || '無題';
-  videos.unshift({ id, title });
-  save();
-  urlInput.value = '';
-  titleInput.value = '';
-  play(id);
+function loadVideo(id) {
+
+    document.getElementById("home").style.display = "none";
+
+    const iframe = document.getElementById("player");
+
+    iframe.src =
+        "https://www.youtube-nocookie.com/embed/" +
+        encodeURIComponent(id);
+
+    iframe.style.display = "block";
 }
 
-addBtn.addEventListener('click', addVideo);
-urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') addVideo(); });
-titleInput.addEventListener('keydown', e => { if (e.key === 'Enter') addVideo(); });
-clearBtn.addEventListener('click', () => {
-  if (videos.length === 0) return;
-  if (confirm('全ての動画を削除しますか？')) {
-    videos = [];
-    currentId = null;
-    save();
-    renderHistory();
-  }
+const params = new URLSearchParams(location.search);
+const id = params.get("id");
+
+if (id) {
+    loadVideo(id);
+}
+
+document.getElementById("openBtn").addEventListener("click", () => {
+
+    const input = document.getElementById("url").value;
+
+    const id = extractVideoId(input);
+
+    if (!id) {
+        alert("動画IDを取得できませんでした。");
+        return;
+    }
+
+    window.open(
+        "https://youtube-search-tool.vercel.app/fsembed/?id=" +
+        encodeURIComponent(id),
+        "_blank"
+    );
 });
-
-// 初期表示
-if (videos.length > 0) {
-  currentId = videos[0].id;
-  // プライバシー強化モードのURLに変更
-  mainPlayer.src = `https://www.youtube-nocookie.com/embed/${currentId}`;
-}
-renderHistory();
 </script>
+
 </body>
 </html>
