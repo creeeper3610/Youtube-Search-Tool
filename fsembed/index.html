@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>YTFS埋め込み</title>
+
+<link rel="icon" href="../ytst_icon.svg" type="image/svg+xml">
+
+<style>
+html,
+body{
+    margin:0;
+    width:100%;
+    height:100%;
+    background:#000;
+    overflow:hidden;
+    font-family:sans-serif;
+}
+
+#home{
+    position:fixed;
+    inset:0;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background:#111;
+}
+
+.box{
+    width:min(700px,90vw);
+}
+
+h1{
+    color:white;
+    text-align:center;
+    margin-bottom:20px;
+}
+
+.input-row{
+    display:flex;
+    gap:10px;
+}
+
+input{
+    flex:1;
+    padding:12px;
+    font-size:16px;
+    border:none;
+    border-radius:8px;
+}
+
+button{
+    padding:12px 20px;
+    font-size:16px;
+    cursor:pointer;
+    border:none;
+    border-radius:8px;
+}
+
+#player{
+    position:fixed;
+    inset:0;
+    width:100%;
+    height:100%;
+    border:none;
+    display:none;
+}
+</style>
+</head>
+<body>
+
+<div id="home">
+    <div class="box">
+        <h1>YTFS埋め込み</h1>
+
+        <div class="input-row">
+            <input
+                id="url"
+                placeholder="YouTubeのURLを入力"
+                autocomplete="off"
+            >
+
+            <button id="openBtn">
+                全画面で開く
+            </button>
+        </div>
+    </div>
+</div>
+
+<iframe
+    id="player"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+    allowfullscreen
+></iframe>
+
+<script>
+function extractVideoId(url) {
+
+    if (!url) return null;
+
+    try {
+
+        const u = new URL(url);
+
+        if (u.hostname.includes("youtu.be")) {
+            return u.pathname.split("/").filter(Boolean)[0];
+        }
+
+        const watchId = u.searchParams.get("v");
+        if (watchId) {
+            return watchId;
+        }
+
+        const paths = u.pathname.split("/").filter(Boolean);
+
+        const embedIndex = paths.indexOf("embed");
+        if (embedIndex !== -1 && paths[embedIndex + 1]) {
+            return paths[embedIndex + 1];
+        }
+
+        const shortsIndex = paths.indexOf("shorts");
+        if (shortsIndex !== -1 && paths[shortsIndex + 1]) {
+            return paths[shortsIndex + 1];
+        }
+
+        const liveIndex = paths.indexOf("live");
+        if (liveIndex !== -1 && paths[liveIndex + 1]) {
+            return paths[liveIndex + 1];
+        }
+
+    } catch {
+
+        const match =
+            url.match(/(?:v=|embed\/|shorts\/|live\/|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+
+        if (match) {
+            return match[1];
+        }
+    }
+
+    return null;
+}
+
+function loadVideo(originalUrl) {
+
+    const videoId = extractVideoId(originalUrl);
+
+    if (!videoId) {
+        document.body.innerHTML =
+            "<div style='display:flex;height:100vh;justify-content:center;align-items:center;color:white;background:black'>動画IDを取得できませんでした</div>";
+        return;
+    }
+
+    document.getElementById("home").style.display = "none";
+
+    const iframe = document.getElementById("player");
+
+    iframe.src =
+        "https://www.youtube-nocookie.com/embed/" +
+        videoId +
+        "?autoplay=1";
+
+    iframe.style.display = "block";
+}
+
+const params = new URLSearchParams(location.search);
+
+const originalUrl = params.get("URL");
+
+if (originalUrl) {
+    loadVideo(originalUrl);
+}
+
+document.getElementById("openBtn").addEventListener("click", () => {
+
+    const url = document.getElementById("url").value.trim();
+
+    if (!url) return;
+
+    window.open(
+        "https://youtube-search-tool.vercel.app/fsembed/?URL=" +
+        encodeURIComponent(url),
+        "_blank"
+    );
+});
+</script>
+
+</body>
+</html>
